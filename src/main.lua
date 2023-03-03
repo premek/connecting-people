@@ -30,7 +30,13 @@ local light, dark = palette[1], palette[2]
 
 local scaleWindow = function()
   if scale < 1 then scale = 1; return end
-  if not love.window.setMode( scale*w, scale*h ) then scale = 8 end
+  if love.system.getOS() == "Android" then
+    local dw, dy = love.graphics.getDimensions()
+    -- setting mode height to graphics width --> if width > screen width it will go to landscape (when scale is too big)
+    love.window.setMode(scale*w, dw, {fullscreen = false} )
+  else
+    if not love.window.setMode( scale*w, scale*h ) then scale = 8 end
+  end
 end
 
 
@@ -43,7 +49,7 @@ local state = {
   over ={},
 }
 
-state.current = state.connecting--TODO
+state.current = state.connecting
 
 
 local deaths=0
@@ -191,7 +197,7 @@ function runner:update(dt)
 
   --end
 
-  if self.fsm:is('running') and love.keyboard.isDown(jumpKeys) then
+  if self.fsm:is('running') and (love.keyboard.isDown(jumpKeys) or #love.touch.getTouches() > 0) then
     self.fsm:jump()
   end
 
@@ -226,6 +232,9 @@ end
 
 function runner:keyreleased(key)
   if jumpKeys[key] then self.fsm:jumpStop() end
+end
+function runner:touchreleased()
+  self.fsm:jumpStop()
 end
 
 
@@ -267,7 +276,10 @@ function love.draw()
   state.current:draw()
   lg.setCanvas()
   lg.setColor(1,1,1)
-  lg.draw(canvas, 0, 0,0,scale, scale)
+
+  -- on android dw != w --> center
+  local dw, dy = love.graphics.getDimensions()  
+  lg.draw(canvas, (dw-w*scale)/2,0,0,scale, scale)
 end
 
 function love.update(dt)
@@ -307,7 +319,11 @@ function state.connecting:draw()
   lg.printf("Connecting People", 0, 27, w, "center")
 end
 
+
 function state.connecting:keypressed(key)
+  state.current=state.countdown
+end
+function state.connecting:touchpressed()
   state.current=state.countdown
 end
 
@@ -356,6 +372,9 @@ end
 function state.play:keyreleased(key)
   runner:keyreleased(key)
 end
+function state.play:touchreleased()
+  runner:touchreleased()
+end
 
 
 
@@ -386,6 +405,9 @@ function state.over:draw()
 end
 
 function state.over:keypressed(key)
+  state.current=state.countdown
+end
+function state.over:touchpressed()
   state.current=state.countdown
 end
 
@@ -452,6 +474,10 @@ function love.keypressed(key)
 
   if state.current.keypressed then state.current:keypressed(key) end
 end
+function love.touchpressed( id, x, y, dx, dy, pressure )
+  if state.current.touchpressed then state.current:touchpressed(id, x, y, dx, dy, pressure) end
+end
+
 function love.textinput(text)
   if text=='+' then scale = scale + 1; scaleWindow() end
   if text=='-' then scale = scale - 1; scaleWindow() end
@@ -459,5 +485,8 @@ end
 
 function love.keyreleased(key)
   if state.current.keyreleased then state.current:keyreleased(key) end
+end
+function love.touchreleased( id, x, y, dx, dy, pressure )
+  if state.current.touchreleased then state.current:touchreleased(id, x, y, dx, dy, pressure) end
 end
 

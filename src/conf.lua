@@ -6,6 +6,9 @@ function love.conf(t)
   t.title = t.window.title
   t.window.fullscreen = false        -- Enable fullscreen (boolean)
   --  t.window.fullscreentype = "normal" -- Standard fullscreen or desktop fullscreen mode (string)
+    t.window.resizable = true -- allows portrait on android?          -- Let the window be user-resizable (boolean)
+
+--  
 
 
 end
